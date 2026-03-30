@@ -1,24 +1,21 @@
 openapi: 3.0.3
 info:
-  title: Items API
+  title: Whiskey Reviews API
   description: |
-    Example domain API for the **Domain API Template**.
+    Community-driven whiskey review API.
 
-    This is a deliberately simple "Items" domain included as a working reference
-    implementation. It demonstrates the full template pattern:
+    Reviewers can add, edit, and remove their own whiskey tasting reviews.
+    Viewers can browse and read all published reviews.
 
-    - JWT-based authentication with two roles (`contributor`, `viewer`)
+    - JWT-based authentication with two roles (`reviewer`, `viewer`)
     - Role-based access control (RBAC)
     - Ownership-scoped write operations
     - Pagination on list endpoints
     - Standard error response shapes
-
-    **Replace this spec** with your own domain's OpenAPI contract when using this template.
-    Run `task domain:init` to copy blank spec templates into `docs/specifications/`.
   version: 1.0.0
   contact:
-    name: Domain API Template
-    email: template@example.com
+    name: Whiskey Reviews API
+    email: admin@whiskeyreviews.example.com
 
 servers:
   - url: http://localhost:3000
@@ -27,15 +24,15 @@ servers:
 tags:
   - name: Auth
     description: Authentication — register, login, refresh tokens, and logout
-  - name: Items
-    description: Item management — add, list, view, edit, and remove items
+  - name: Reviews
+    description: Whiskey review management — add, list, view, edit, and remove reviews
 
 paths:
   /v1/auth/register:
     post:
       tags: [Auth]
       summary: Register a new user
-      description: Create a new user account with either `contributor` or `viewer` role. Returns access and refresh tokens on success.
+      description: Create a new user account with either `reviewer` or `viewer` role. Returns access and refresh tokens on success.
       operationId: registerUser
       requestBody:
         required: true
@@ -115,12 +112,12 @@ paths:
         '401':
           $ref: '#/components/responses/AuthenticationError'
 
-  /v1/items:
+  /v1/reviews:
     get:
-      tags: [Items]
-      summary: List items
-      description: Returns a paginated list of all items. Accessible by both `contributor` and `viewer` roles.
-      operationId: listItems
+      tags: [Reviews]
+      summary: List reviews
+      description: Returns a paginated list of all whiskey reviews. Accessible by both `reviewer` and `viewer` roles.
+      operationId: listReviews
       security:
         - bearerAuth: []
       parameters:
@@ -128,19 +125,19 @@ paths:
         - $ref: '#/components/parameters/PageSize'
       responses:
         '200':
-          description: Paginated list of items
+          description: Paginated list of reviews
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ItemList'
+                $ref: '#/components/schemas/ReviewList'
         '401':
           $ref: '#/components/responses/AuthenticationError'
 
     post:
-      tags: [Items]
-      summary: Add an item
-      description: Add a new item to the catalogue. Only `contributor` role may add items. The item is associated with the authenticated contributor.
-      operationId: createItem
+      tags: [Reviews]
+      summary: Add a review
+      description: Add a new whiskey review. Only `reviewer` role may add reviews. The review is associated with the authenticated reviewer.
+      operationId: createReview
       security:
         - bearerAuth: []
       requestBody:
@@ -148,14 +145,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateItemRequest'
+              $ref: '#/components/schemas/CreateReviewRequest'
       responses:
         '201':
-          description: Item added successfully
+          description: Review added successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Item'
+                $ref: '#/components/schemas/Review'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -163,50 +160,50 @@ paths:
         '403':
           $ref: '#/components/responses/ForbiddenError'
 
-  /v1/items/{itemId}:
+  /v1/reviews/{reviewId}:
     get:
-      tags: [Items]
-      summary: Get an item
-      description: Retrieve a single item by its ID. Accessible by both `contributor` and `viewer` roles.
-      operationId: getItem
+      tags: [Reviews]
+      summary: Get a review
+      description: Retrieve a single whiskey review by its ID. Accessible by both `reviewer` and `viewer` roles.
+      operationId: getReview
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ItemId'
+        - $ref: '#/components/parameters/ReviewId'
       responses:
         '200':
-          description: Item found
+          description: Review found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Item'
+                $ref: '#/components/schemas/Review'
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '404':
           $ref: '#/components/responses/NotFoundError'
 
     patch:
-      tags: [Items]
-      summary: Edit an item
-      description: Partially edit an item. Only the `contributor` who added the item may edit it.
-      operationId: updateItem
+      tags: [Reviews]
+      summary: Edit a review
+      description: Partially edit a whiskey review. Only the `reviewer` who added the review may edit it.
+      operationId: updateReview
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ItemId'
+        - $ref: '#/components/parameters/ReviewId'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateItemRequest'
+              $ref: '#/components/schemas/UpdateReviewRequest'
       responses:
         '200':
-          description: Item edited successfully
+          description: Review edited successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Item'
+                $ref: '#/components/schemas/Review'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -217,17 +214,17 @@ paths:
           $ref: '#/components/responses/NotFoundError'
 
     delete:
-      tags: [Items]
-      summary: Remove an item
-      description: Remove an item from the catalogue. Only the `contributor` who added the item may remove it.
-      operationId: deleteItem
+      tags: [Reviews]
+      summary: Remove a review
+      description: Remove a whiskey review. Only the `reviewer` who added the review may remove it.
+      operationId: deleteReview
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ItemId'
+        - $ref: '#/components/parameters/ReviewId'
       responses:
         '204':
-          description: Item removed successfully
+          description: Review removed successfully
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '403':
@@ -243,11 +240,11 @@ components:
       bearerFormat: JWT
 
   parameters:
-    ItemId:
-      name: itemId
+    ReviewId:
+      name: reviewId
       in: path
       required: true
-      description: Unique identifier of the item
+      description: Unique identifier of the review
       schema:
         type: string
         format: uuid
@@ -292,7 +289,7 @@ components:
           minLength: 1
         role:
           type: string
-          enum: [contributor, viewer]
+          enum: [reviewer, viewer]
 
     LoginRequest:
       type: object
@@ -341,28 +338,44 @@ components:
           type: string
         role:
           type: string
-          enum: [contributor, viewer]
+          enum: [reviewer, viewer]
 
-    Item:
+    Review:
       type: object
-      required: [id, name, description, status, contributorId, createdAt, updatedAt]
+      required: [id, whiskeyName, distillery, region, age, rating, tastingNotes, status, reviewerId, createdAt, updatedAt]
       properties:
         id:
           type: string
           format: uuid
-        name:
+        whiskeyName:
           type: string
           minLength: 1
-        description:
+        distillery:
+          type: string
+          minLength: 1
+        region:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Age statement in years; null for no age statement (NAS)
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Rating from 1 to 100
+        tastingNotes:
           type: string
           nullable: true
         status:
           type: string
-          enum: [active, archived]
-        contributorId:
+          enum: [published, archived]
+        reviewerId:
           type: string
           format: uuid
-          description: ID of the contributor who added this item
+          description: ID of the reviewer who added this review
         createdAt:
           type: string
           format: date-time
@@ -370,14 +383,14 @@ components:
           type: string
           format: date-time
 
-    ItemList:
+    ReviewList:
       type: object
       required: [data, pagination]
       properties:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Item'
+            $ref: '#/components/schemas/Review'
         pagination:
           $ref: '#/components/schemas/Pagination'
 
@@ -392,30 +405,58 @@ components:
         total:
           type: integer
 
-    CreateItemRequest:
+    CreateReviewRequest:
       type: object
-      required: [name]
+      required: [whiskeyName, distillery, rating]
       properties:
-        name:
+        whiskeyName:
           type: string
           minLength: 1
-        description:
+        distillery:
+          type: string
+          minLength: 1
+        region:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          minimum: 1
+          nullable: true
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 100
+        tastingNotes:
           type: string
           nullable: true
 
-    UpdateItemRequest:
+    UpdateReviewRequest:
       type: object
       minProperties: 1
       properties:
-        name:
+        whiskeyName:
           type: string
           minLength: 1
-        description:
+        distillery:
+          type: string
+          minLength: 1
+        region:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          minimum: 1
+          nullable: true
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 100
+        tastingNotes:
           type: string
           nullable: true
         status:
           type: string
-          enum: [active, archived]
+          enum: [published, archived]
 
     Error:
       type: object

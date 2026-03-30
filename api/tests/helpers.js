@@ -17,9 +17,9 @@ function tokenForUser(user) {
   return signAccessToken({ sub: user.id, email: user.email, role: user.role });
 }
 
-async function createContributorToken(overrides = {}) {
-  const email = overrides.email || `contributor-${uuidv4()}@test.com`;
-  const user = await createUser(email, 'password123', 'Test', 'Contributor', 'contributor');
+async function createReviewerToken(overrides = {}) {
+  const email = overrides.email || `reviewer-${uuidv4()}@test.com`;
+  const user = await createUser(email, 'password123', 'Test', 'Reviewer', 'reviewer');
   return { token: tokenForUser(user), user };
 }
 
@@ -29,20 +29,24 @@ async function createViewerToken(overrides = {}) {
   return { token: tokenForUser(user), user };
 }
 
-function seedItem(contributorId, overrides = {}) {
+function seedReview(reviewerId, overrides = {}) {
   const now = new Date().toISOString();
-  const item = {
+  const review = {
     id: uuidv4(),
-    name: 'Sample Item',
-    description: 'A sample item description.',
-    status: 'active',
-    contributorId,
+    whiskeyName: 'Glenfiddich 12',
+    distillery: 'Glenfiddich',
+    region: 'Speyside',
+    age: 12,
+    rating: 85,
+    tastingNotes: 'Fruity with hints of pear and oak.',
+    status: 'published',
+    reviewerId,
     createdAt: now,
     updatedAt: now,
     ...overrides,
   };
-  store.items.set(item.id, item);
-  return item;
+  store.reviews.set(review.id, review);
+  return review;
 }
 
 module.exports = {
@@ -50,8 +54,8 @@ module.exports = {
   store,
   resetStore,
   createUser,
-  createContributorToken,
+  createReviewerToken,
   createViewerToken,
-  seedItem,
+  seedReview,
   tokenForUser,
 };

@@ -22,8 +22,8 @@ tasks:
   # AUTH
   # ---------------------------------------------------------------------------
 
-  auth:register:contributor:
-    desc: Register a contributor (saves CONTRIBUTOR_TOKEN)
+  auth:register:reviewer:
+    desc: Register a reviewer (saves REVIEWER_TOKEN)
     vars:
       DEMO_ID:
         sh: grep '^DEMO_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
@@ -32,16 +32,16 @@ tasks:
         RESPONSE=$(curl -s -X POST {{.BASE_URL}}/auth/register \
           -H "Content-Type: application/json" \
           -d "{
-            \"email\": \"contributor.{{.DEMO_ID}}@example.com\",
+            \"email\": \"reviewer.{{.DEMO_ID}}@example.com\",
             \"password\": \"password123\",
             \"firstName\": \"Alice\",
-            \"lastName\": \"Contributor\",
-            \"role\": \"contributor\"
+            \"lastName\": \"Reviewer\",
+            \"role\": \"reviewer\"
           }")
         echo "$RESPONSE" | jq .
         TOKEN=$(echo "$RESPONSE" | jq -r '.accessToken')
-        grep -v "^CONTRIBUTOR_TOKEN=" {{.STATE}} > {{.STATE}}.tmp 2>/dev/null || true
-        echo "CONTRIBUTOR_TOKEN=$TOKEN" >> {{.STATE}}.tmp
+        grep -v "^REVIEWER_TOKEN=" {{.STATE}} > {{.STATE}}.tmp 2>/dev/null || true
+        echo "REVIEWER_TOKEN=$TOKEN" >> {{.STATE}}.tmp
         mv {{.STATE}}.tmp {{.STATE}}
 
   auth:register:viewer:
@@ -66,8 +66,8 @@ tasks:
         echo "VIEWER_TOKEN=$TOKEN" >> {{.STATE}}.tmp
         mv {{.STATE}}.tmp {{.STATE}}
 
-  auth:login:contributor:
-    desc: Login as contributor (saves CONTRIBUTOR_TOKEN)
+  auth:login:reviewer:
+    desc: Login as reviewer (saves REVIEWER_TOKEN)
     vars:
       DEMO_ID:
         sh: grep '^DEMO_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
@@ -76,124 +76,128 @@ tasks:
         RESPONSE=$(curl -s -X POST {{.BASE_URL}}/auth/login \
           -H "Content-Type: application/json" \
           -d "{
-            \"email\": \"contributor.{{.DEMO_ID}}@example.com\",
+            \"email\": \"reviewer.{{.DEMO_ID}}@example.com\",
             \"password\": \"password123\"
           }")
         echo "$RESPONSE" | jq .
         TOKEN=$(echo "$RESPONSE" | jq -r '.accessToken')
-        grep -v "^CONTRIBUTOR_TOKEN=" {{.STATE}} > {{.STATE}}.tmp 2>/dev/null || true
-        echo "CONTRIBUTOR_TOKEN=$TOKEN" >> {{.STATE}}.tmp
+        grep -v "^REVIEWER_TOKEN=" {{.STATE}} > {{.STATE}}.tmp 2>/dev/null || true
+        echo "REVIEWER_TOKEN=$TOKEN" >> {{.STATE}}.tmp
         mv {{.STATE}}.tmp {{.STATE}}
 
   auth:logout:
-    desc: Logout (invalidate the contributor session)
+    desc: Logout (invalidate the reviewer session)
     vars:
-      CONTRIBUTOR_TOKEN:
-        sh: grep '^CONTRIBUTOR_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      REVIEWER_TOKEN:
+        sh: grep '^REVIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
     cmds:
       - |
         curl -s -X POST {{.BASE_URL}}/auth/logout \
-          -H "Authorization: Bearer {{.CONTRIBUTOR_TOKEN}}"
+          -H "Authorization: Bearer {{.REVIEWER_TOKEN}}"
         echo "Logged out."
 
   # ---------------------------------------------------------------------------
-  # ITEMS
+  # REVIEWS
   # ---------------------------------------------------------------------------
 
-  items:list:
-    desc: List all items (uses CONTRIBUTOR_TOKEN)
+  reviews:list:
+    desc: List all whiskey reviews (uses REVIEWER_TOKEN)
     vars:
-      CONTRIBUTOR_TOKEN:
-        sh: grep '^CONTRIBUTOR_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      REVIEWER_TOKEN:
+        sh: grep '^REVIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
     cmds:
       - |
-        curl -s -X GET {{.BASE_URL}}/items \
-          -H "Authorization: Bearer {{.CONTRIBUTOR_TOKEN}}" | jq .
+        curl -s -X GET {{.BASE_URL}}/reviews \
+          -H "Authorization: Bearer {{.REVIEWER_TOKEN}}" | jq .
 
-  items:create:
-    desc: Add a new item to the catalogue (saves ITEM_ID)
+  reviews:create:
+    desc: Add a new whiskey review (saves REVIEW_ID)
     vars:
       DEMO_ID:
         sh: grep '^DEMO_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
-      CONTRIBUTOR_TOKEN:
-        sh: grep '^CONTRIBUTOR_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      REVIEWER_TOKEN:
+        sh: grep '^REVIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
     cmds:
       - |
-        RESPONSE=$(curl -s -X POST {{.BASE_URL}}/items \
+        RESPONSE=$(curl -s -X POST {{.BASE_URL}}/reviews \
           -H "Content-Type: application/json" \
-          -H "Authorization: Bearer {{.CONTRIBUTOR_TOKEN}}" \
+          -H "Authorization: Bearer {{.REVIEWER_TOKEN}}" \
           -d "{
-            \"name\": \"Demo Item {{.DEMO_ID}}\",
-            \"description\": \"An item added during the demo run.\"
+            \"whiskeyName\": \"Demo Dram {{.DEMO_ID}}\",
+            \"distillery\": \"Glen Demo\",
+            \"region\": \"Speyside\",
+            \"age\": 12,
+            \"rating\": 85,
+            \"tastingNotes\": \"A demo review with fruity notes and a smooth finish.\"
           }")
         echo "$RESPONSE" | jq .
-        ITEM_ID=$(echo "$RESPONSE" | jq -r '.id')
-        grep -v "^ITEM_ID=" {{.STATE}} > {{.STATE}}.tmp 2>/dev/null || true
-        echo "ITEM_ID=$ITEM_ID" >> {{.STATE}}.tmp
+        REVIEW_ID=$(echo "$RESPONSE" | jq -r '.id')
+        grep -v "^REVIEW_ID=" {{.STATE}} > {{.STATE}}.tmp 2>/dev/null || true
+        echo "REVIEW_ID=$REVIEW_ID" >> {{.STATE}}.tmp
         mv {{.STATE}}.tmp {{.STATE}}
 
-  items:get:
-    desc: Get the demo item by ID
+  reviews:get:
+    desc: Get the demo review by ID
     vars:
-      CONTRIBUTOR_TOKEN:
-        sh: grep '^CONTRIBUTOR_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
-      ITEM_ID:
-        sh: grep '^ITEM_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      REVIEWER_TOKEN:
+        sh: grep '^REVIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      REVIEW_ID:
+        sh: grep '^REVIEW_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
     cmds:
       - |
-        curl -s -X GET {{.BASE_URL}}/items/{{.ITEM_ID}} \
-          -H "Authorization: Bearer {{.CONTRIBUTOR_TOKEN}}" | jq .
+        curl -s -X GET {{.BASE_URL}}/reviews/{{.REVIEW_ID}} \
+          -H "Authorization: Bearer {{.REVIEWER_TOKEN}}" | jq .
 
-  items:update:
-    desc: Archive the demo item
+  reviews:update:
+    desc: Edit the demo review (archive it)
     vars:
-      CONTRIBUTOR_TOKEN:
-        sh: grep '^CONTRIBUTOR_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
-      ITEM_ID:
-        sh: grep '^ITEM_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      REVIEWER_TOKEN:
+        sh: grep '^REVIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      REVIEW_ID:
+        sh: grep '^REVIEW_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
     cmds:
       - |
-        curl -s -X PATCH {{.BASE_URL}}/items/{{.ITEM_ID}} \
+        curl -s -X PATCH {{.BASE_URL}}/reviews/{{.REVIEW_ID}} \
           -H "Content-Type: application/json" \
-          -H "Authorization: Bearer {{.CONTRIBUTOR_TOKEN}}" \
+          -H "Authorization: Bearer {{.REVIEWER_TOKEN}}" \
           -d '{"status": "archived"}' | jq .
 
-  items:delete:
-    desc: Remove the demo item from the catalogue
+  reviews:delete:
+    desc: Remove the demo review
     vars:
-      CONTRIBUTOR_TOKEN:
-        sh: grep '^CONTRIBUTOR_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
-      ITEM_ID:
-        sh: grep '^ITEM_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      REVIEWER_TOKEN:
+        sh: grep '^REVIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      REVIEW_ID:
+        sh: grep '^REVIEW_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
     cmds:
       - |
         STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
-          {{.BASE_URL}}/items/{{.ITEM_ID}} \
-          -H "Authorization: Bearer {{.CONTRIBUTOR_TOKEN}}")
-        echo "DELETE /items/{{.ITEM_ID}} → HTTP $STATUS"
+          {{.BASE_URL}}/reviews/{{.REVIEW_ID}} \
+          -H "Authorization: Bearer {{.REVIEWER_TOKEN}}")
+        echo "DELETE /reviews/{{.REVIEW_ID}} → HTTP $STATUS"
 
-  items:list:viewer:
-    desc: List items as a viewer (demonstrates read-only access)
+  reviews:list:viewer:
+    desc: List reviews as a viewer (demonstrates read-only access)
     vars:
       VIEWER_TOKEN:
         sh: grep '^VIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
     cmds:
       - |
-        curl -s -X GET {{.BASE_URL}}/items \
+        curl -s -X GET {{.BASE_URL}}/reviews \
           -H "Authorization: Bearer {{.VIEWER_TOKEN}}" | jq .
 
-  items:create:viewer:
-    desc: Attempt to add an item as a viewer (expects 403 Forbidden)
+  reviews:create:viewer:
+    desc: Attempt to add a review as a viewer (expects 403 Forbidden)
     vars:
       VIEWER_TOKEN:
         sh: grep '^VIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
     cmds:
       - |
         echo "Attempting to add as viewer (should be 403):"
-        curl -s -X POST {{.BASE_URL}}/items \
+        curl -s -X POST {{.BASE_URL}}/reviews \
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer {{.VIEWER_TOKEN}}" \
-          -d '{"name": "Forbidden Item"}' | jq .
+          -d '{"whiskeyName": "Forbidden Dram", "distillery": "Forbidden Distillery", "rating": 70}' | jq .
 
   # ---------------------------------------------------------------------------
   # DEMO WORKFLOW
@@ -204,29 +208,29 @@ tasks:
     cmds:
       - task: state:clear
       - echo ""
-      - echo "=== 1. Register contributor and viewer ==="
-      - task: auth:register:contributor
+      - echo "=== 1. Register reviewer and viewer ==="
+      - task: auth:register:reviewer
       - task: auth:register:viewer
       - echo ""
-      - echo "=== 2. Contributor adds an item ==="
-      - task: items:create
+      - echo "=== 2. Reviewer adds a whiskey review ==="
+      - task: reviews:create
       - echo ""
-      - echo "=== 3. List items (contributor view) ==="
-      - task: items:list
+      - echo "=== 3. List reviews (reviewer view) ==="
+      - task: reviews:list
       - echo ""
-      - echo "=== 4. Viewer lists items (read-only) ==="
-      - task: items:list:viewer
+      - echo "=== 4. Viewer lists reviews (read-only) ==="
+      - task: reviews:list:viewer
       - echo ""
-      - echo "=== 5. Viewer tries to add (expect 403) ==="
-      - task: items:create:viewer
+      - echo "=== 5. Viewer tries to add a review (expect 403) ==="
+      - task: reviews:create:viewer
       - echo ""
-      - echo "=== 6. Get specific item ==="
-      - task: items:get
+      - echo "=== 6. Get specific review ==="
+      - task: reviews:get
       - echo ""
-      - echo "=== 7. Edit item (archive it) ==="
-      - task: items:update
+      - echo "=== 7. Edit review (archive it) ==="
+      - task: reviews:update
       - echo ""
-      - echo "=== 8. Remove item ==="
-      - task: items:delete
+      - echo "=== 8. Remove review ==="
+      - task: reviews:delete
       - echo ""
       - echo "=== Demo complete ==="

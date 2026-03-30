@@ -1,59 +1,53 @@
-# Product Requirements Document — Items
-
-> **Example domain.** This is the working reference implementation included with the Domain API Template.
-> It is intentionally simple. Replace the contents of `docs/specifications/` with your own domain
-> by running `task domain:init` and editing the generated files.
+# Product Requirements Document — Whiskey Reviews
 
 ---
 
 ## Problem Statement
 
-Teams building new APIs need a consistent, spec-driven starting point that demonstrates all the key patterns (auth, role-based access control, item lifecycle management, pagination, events) without domain complexity getting in the way.
+Whiskey enthusiasts need a dedicated API to record, share, and browse whiskey tasting reviews. Reviewers want to publish their tasting notes and ratings, while viewers want to discover new whiskies through curated reviews.
 
-**Business:** Domain API Template — reusable scaffold.
-
-The **Items** domain provides a minimal, working example that anyone can understand in minutes.
+**Business:** Whiskey Reviews API — a community-driven whiskey review platform.
 
 ## Target Users / Personas
 
-### Contributor
+### Reviewer
 
-A user who can add and manage their own items.
+A whiskey enthusiast who tastes and writes reviews.
 
-- **Goal:** Add items to the catalogue and keep them up to date.
-- **Frustration:** Too many steps to add a simple item; can't easily archive old items.
+- **Goal:** Record detailed tasting notes and ratings for whiskies, and keep their reviews up to date.
+- **Frustration:** No structured way to capture whiskey metadata (distillery, region, age) alongside a personal rating.
 
 ### Viewer
 
-A user who can browse the item catalogue but cannot make changes.
+A user who browses whiskey reviews without contributing.
 
-- **Goal:** Find and view items without clutter.
-- **Frustration:** Accidental edits by other users affecting their view.
+- **Goal:** Discover new whiskies and read expert tasting notes.
+- **Frustration:** Reviews edited or removed by others without their knowledge.
 
 ## Goals
 
-1. Provide a minimal, running API example that demonstrates authentication, role-based access control, item lifecycle management, and pagination.
-2. Keep the example simple enough that any developer can grasp the full domain in under 5 minutes.
-3. Show — not just describe — the template patterns so they are easy to replicate in a new domain.
+1. Provide a whiskey review API that supports authentication, role-based access control, review lifecycle management, and pagination.
+2. Capture whiskey-specific attributes: distillery, region, age statement, rating, and tasting notes.
+3. Keep reviews owned by the reviewer who wrote them.
 
 ## Non-Goals
 
-1. A real product use case (items has no real business meaning).
-2. Complex state machines, nested resources, or domain events beyond simple lifecycle events.
-3. Persistent storage — the in-memory store resets on restart.
+1. Persistent storage — the in-memory store resets on restart.
+2. Social features (likes, comments, follows).
+3. Whiskey catalogue management — reviews are self-contained entries.
 
 ## User Stories
 
 ### Authentication
 
-#### US-001: Register as a contributor or viewer
+#### US-001: Register as a reviewer or viewer
 
 **As a** new user,
 **I want to** register with an email, password, and role,
 **So that** I can access the API.
 
 **Acceptance Criteria:**
-- [x] POST /v1/auth/register accepts `contributor` or `viewer` role
+- [x] POST /v1/auth/register accepts `reviewer` or `viewer` role
 - [x] Returns access token + refresh token on success
 - [x] Returns 409 if email already registered
 
@@ -67,66 +61,65 @@ A user who can browse the item catalogue but cannot make changes.
 - [x] POST /v1/auth/login returns 200 with tokens on valid credentials
 - [x] Returns 401 on invalid credentials
 
-### Items
+### Reviews
 
-#### US-003: Add an item to the catalogue
+#### US-003: Add a whiskey review
 
-**As a** contributor,
-**I want to** add a new item with a name and optional description,
-**So that** it appears in the catalogue.
+**As a** reviewer,
+**I want to** add a new review with a whiskey name, distillery, rating, and optional tasting notes,
+**So that** it appears in the reviews catalogue.
 
 **Acceptance Criteria:**
-- [x] POST /v1/items adds an item with `status: active`
-- [x] Item is associated with the authenticated contributor's ID
-- [x] Viewers cannot add items (403)
+- [x] POST /v1/reviews adds a review with `status: published`
+- [x] Review is associated with the authenticated reviewer's ID
+- [x] Viewers cannot add reviews (403)
 
-#### US-004: List all items
+#### US-004: List all whiskey reviews
 
-**As a** contributor or viewer,
-**I want to** list all items with pagination,
+**As a** reviewer or viewer,
+**I want to** list all reviews with pagination,
 **So that** I can browse the catalogue.
 
 **Acceptance Criteria:**
-- [x] GET /v1/items returns paginated list
-- [x] Both roles can list items
+- [x] GET /v1/reviews returns paginated list
+- [x] Both roles can list reviews
 
-#### US-005: View a single item
+#### US-005: View a single whiskey review
 
-**As a** contributor or viewer,
-**I want to** view the details of a single item,
-**So that** I can see its full information.
+**As a** reviewer or viewer,
+**I want to** view the details of a single review,
+**So that** I can see its full tasting notes and rating.
 
 **Acceptance Criteria:**
-- [x] GET /v1/items/:itemId returns the item
+- [x] GET /v1/reviews/:reviewId returns the review
 - [x] Returns 404 if not found
 
-#### US-006: Edit my own item
+#### US-006: Edit my own whiskey review
 
-**As a** contributor,
-**I want to** edit the name, description, or status of an item I added,
-**So that** I can keep the catalogue accurate.
+**As a** reviewer,
+**I want to** edit the details of a review I wrote,
+**So that** I can keep my tasting notes accurate.
 
 **Acceptance Criteria:**
-- [x] PATCH /v1/items/:itemId edits the item
-- [x] Returns 403 if the item belongs to a different contributor
-- [x] Viewers cannot edit items (403)
+- [x] PATCH /v1/reviews/:reviewId edits the review
+- [x] Returns 403 if the review belongs to a different reviewer
+- [x] Viewers cannot edit reviews (403)
 
-#### US-007: Remove my own item from the catalogue
+#### US-007: Remove my own whiskey review
 
-**As a** contributor,
-**I want to** remove an item I added,
+**As a** reviewer,
+**I want to** remove a review I wrote,
 **So that** it is no longer in the catalogue.
 
 **Acceptance Criteria:**
-- [x] DELETE /v1/items/:itemId removes the item
-- [x] Returns 403 if the item belongs to a different contributor
-- [x] Viewers cannot remove items (403)
+- [x] DELETE /v1/reviews/:reviewId removes the review
+- [x] Returns 403 if the review belongs to a different reviewer
+- [x] Viewers cannot remove reviews (403)
 
 ## Constraints
 
 1. In-memory store only (no database).
-2. No real business domain — items are intentionally generic.
-3. JavaScript (Node.js/Express) only.
+2. JavaScript (Node.js/Express) only.
 
 ## Success Metrics
 
