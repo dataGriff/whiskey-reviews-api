@@ -1,0 +1,702 @@
+openapi: 3.0.3
+info:
+  title: Whiskey Reviews API
+  description: |
+    Community-driven whiskey review API backed by an admin-curated whiskey inventory.
+
+    - Admins manage the whiskey inventory (add, edit, remove whiskies)
+    - Reviewers submit tasting reviews for whiskies in the inventory
+    - Viewers browse whiskies and reviews (read-only)
+    - JWT-based authentication with three roles (`admin`, `reviewer`, `viewer`)
+    - Role-based access control (RBAC)
+    - Pagination on list endpoints
+    - Standard error response shapes
+  version: 1.0.0
+  contact:
+    name: Whiskey Reviews API
+    email: admin@whiskeyreviews.example.com
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Authentication — register, login, refresh tokens, and logout
+  - name: Whiskies
+    description: Whiskey inventory — add, list, view, edit, and remove whiskies (admin managed)
+  - name: Reviews
+    description: Whiskey review management — add, list, view, edit, and remove reviews
+
+paths:
+  /v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: Create a new user account with `admin`, `reviewer`, or `viewer` role. Returns access and refresh tokens on success.
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in
+      description: Authenticate with email and password. Returns access and refresh tokens.
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      description: Exchange a refresh token for a new access token and refresh token pair.
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+
+  /v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out
+      description: Invalidate the current session. Requires a valid bearer token.
+      operationId: logoutUser
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Logged out successfully
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+
+  /v1/whiskies:
+    get:
+      tags: [Whiskies]
+      summary: List whiskies
+      description: Returns a paginated list of all whiskies in the inventory. Accessible by all authenticated roles.
+      operationId: listWhiskies
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated list of whiskies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhiskeyList'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+
+    post:
+      tags: [Whiskies]
+      summary: Add a whiskey
+      description: Add a new whiskey to the inventory. Only `admin` role may add whiskies.
+      operationId: createWhiskey
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWhiskeyRequest'
+      responses:
+        '201':
+          description: Whiskey added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Whiskey'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /v1/whiskies/{whiskeyId}:
+    get:
+      tags: [Whiskies]
+      summary: Get a whiskey
+      description: Retrieve a single whiskey by its ID. Accessible by all authenticated roles.
+      operationId: getWhiskey
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WhiskeyId'
+      responses:
+        '200':
+          description: Whiskey found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Whiskey'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      tags: [Whiskies]
+      summary: Edit a whiskey
+      description: Partially edit a whiskey in the inventory. Only `admin` role may edit whiskies.
+      operationId: updateWhiskey
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WhiskeyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWhiskeyRequest'
+      responses:
+        '200':
+          description: Whiskey edited successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Whiskey'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags: [Whiskies]
+      summary: Remove a whiskey
+      description: Remove a whiskey from the inventory. Only `admin` role may remove whiskies.
+      operationId: deleteWhiskey
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WhiskeyId'
+      responses:
+        '204':
+          description: Whiskey removed successfully
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /v1/reviews:
+    get:
+      tags: [Reviews]
+      summary: List reviews
+      description: Returns a paginated list of all whiskey reviews. Accessible by all authenticated roles.
+      operationId: listReviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated list of reviews
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewList'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+
+    post:
+      tags: [Reviews]
+      summary: Add a review
+      description: Add a new review for a whiskey in the inventory. Only `reviewer` role may add reviews.
+      operationId: createReview
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewRequest'
+      responses:
+        '201':
+          description: Review added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /v1/reviews/{reviewId}:
+    get:
+      tags: [Reviews]
+      summary: Get a review
+      description: Retrieve a single review by its ID. Accessible by all authenticated roles.
+      operationId: getReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+      responses:
+        '200':
+          description: Review found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      tags: [Reviews]
+      summary: Edit a review
+      description: Partially edit a review. Only the `reviewer` who added the review may edit it.
+      operationId: updateReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReviewRequest'
+      responses:
+        '200':
+          description: Review edited successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags: [Reviews]
+      summary: Remove a review
+      description: Remove a review. Only the `reviewer` who added the review may remove it.
+      operationId: deleteReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+      responses:
+        '204':
+          description: Review removed successfully
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    WhiskeyId:
+      name: whiskeyId
+      in: path
+      required: true
+      description: Unique identifier of the whiskey
+      schema:
+        type: string
+        format: uuid
+
+    ReviewId:
+      name: reviewId
+      in: path
+      required: true
+      description: Unique identifier of the review
+      schema:
+        type: string
+        format: uuid
+
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Page number (1-based)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      description: Number of results per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password, firstName, lastName, role]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          enum: [admin, reviewer, viewer]
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [accessToken, refreshToken, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          description: Access token lifetime in seconds
+        user:
+          $ref: '#/components/schemas/UserSummary'
+
+    UserSummary:
+      type: object
+      required: [id, email, firstName, lastName, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [admin, reviewer, viewer]
+
+    Whiskey:
+      type: object
+      required: [id, name, distillery, region, age, description, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+        distillery:
+          type: string
+          minLength: 1
+        region:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Age statement in years; null for no age statement (NAS)
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WhiskeyList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Whiskey'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    CreateWhiskeyRequest:
+      type: object
+      required: [name, distillery]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        distillery:
+          type: string
+          minLength: 1
+        region:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          minimum: 1
+          nullable: true
+        description:
+          type: string
+          nullable: true
+
+    UpdateWhiskeyRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+        distillery:
+          type: string
+          minLength: 1
+        region:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          minimum: 1
+          nullable: true
+        description:
+          type: string
+          nullable: true
+
+    Review:
+      type: object
+      required: [id, whiskeyId, rating, tastingNotes, status, reviewerId, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        whiskeyId:
+          type: string
+          format: uuid
+          description: ID of the whiskey being reviewed
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Rating from 1 to 100
+        tastingNotes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [published, archived]
+        reviewerId:
+          type: string
+          format: uuid
+          description: ID of the reviewer who added this review
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ReviewList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Review'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      required: [page, pageSize, total]
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+
+    CreateReviewRequest:
+      type: object
+      required: [whiskeyId, rating]
+      properties:
+        whiskeyId:
+          type: string
+          format: uuid
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 100
+        tastingNotes:
+          type: string
+          nullable: true
+
+    UpdateReviewRequest:
+      type: object
+      minProperties: 1
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 100
+        tastingNotes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [published, archived]
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    ValidationError:
+      type: object
+      required: [code, message, details]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+            required: [field, issue]
+            properties:
+              field:
+                type: string
+              issue:
+                type: string
+
+  responses:
+    ValidationError:
+      description: Request body or parameters failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    AuthenticationError:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ForbiddenError:
+      description: Authenticated user lacks permission for this operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFoundError:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ConflictError:
+      description: A resource with the same unique identifier already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
