@@ -1,7 +1,4 @@
-# Sequence Diagrams — Items
-
-> **Example domain.** This is the working reference implementation included with the Domain API Template.
-> Replace this file with your own sequence diagrams by running `task domain:init`.
+# Sequence Diagrams — Whiskey Reviews
 
 ---
 
@@ -12,7 +9,7 @@ sequenceDiagram
     participant Client
     participant API
 
-    Client->>API: POST /v1/auth/register<br/>{ email, password, role: "contributor" }
+    Client->>API: POST /v1/auth/register<br/>{ email, password, role: "reviewer" }
     API-->>Client: 201 { accessToken, refreshToken, user }
 
     Client->>API: POST /v1/auth/login<br/>{ email, password }
@@ -21,29 +18,51 @@ sequenceDiagram
 
 ---
 
-## Flow 2: Contributor Creates and Manages Items
+## Flow 2: Admin Manages Whiskey Inventory
 
 ```mermaid
 sequenceDiagram
-    participant Contributor
+    participant Admin
     participant API
 
-    Contributor->>API: POST /v1/items<br/>{ name: "My Item" }<br/>Authorization: Bearer <token>
-    API-->>Contributor: 201 { id, name, status: "active", contributorId, ... }
+    Admin->>API: POST /v1/whiskies<br/>{ name: "Laphroaig 10", distillery: "Laphroaig", region: "Islay", age: 10 }<br/>Authorization: ******
+    API-->>Admin: 201 { id, name, distillery, region, age, ... }
 
-    Contributor->>API: GET /v1/items<br/>Authorization: Bearer <token>
-    API-->>Contributor: 200 { data: [...], pagination: { page, pageSize, total } }
+    Admin->>API: GET /v1/whiskies<br/>Authorization: ******
+    API-->>Admin: 200 { data: [...], pagination: { page, pageSize, total } }
 
-    Contributor->>API: PATCH /v1/items/{itemId}<br/>{ status: "archived" }<br/>Authorization: Bearer <token>
-    API-->>Contributor: 200 { id, name, status: "archived", ... }
+    Admin->>API: PATCH /v1/whiskies/{whiskeyId}<br/>{ description: "Classic Islay single malt." }<br/>Authorization: ******
+    API-->>Admin: 200 { id, name, distillery, description, ... }
 
-    Contributor->>API: DELETE /v1/items/{itemId}<br/>Authorization: Bearer <token>
-    API-->>Contributor: 204
+    Admin->>API: DELETE /v1/whiskies/{whiskeyId}<br/>Authorization: ******
+    API-->>Admin: 204
 ```
 
 ---
 
-## Flow 3: Viewer Browses Items
+## Flow 3: Reviewer Submits a Review
+
+```mermaid
+sequenceDiagram
+    participant Reviewer
+    participant API
+
+    Reviewer->>API: GET /v1/whiskies<br/>Authorization: ******
+    API-->>Reviewer: 200 { data: [{ id, name, distillery, ... }], pagination: { ... } }
+
+    Reviewer->>API: POST /v1/reviews<br/>{ whiskeyId: "<id>", rating: 90, tastingNotes: "Smoky and peaty" }<br/>Authorization: ******
+    API-->>Reviewer: 201 { id, whiskeyId, rating, tastingNotes, status: "published", reviewerId, ... }
+
+    Reviewer->>API: PATCH /v1/reviews/{reviewId}<br/>{ tastingNotes: "Smoky, peaty, with a long finish", status: "archived" }<br/>Authorization: ******
+    API-->>Reviewer: 200 { id, whiskeyId, rating, tastingNotes, status: "archived", ... }
+
+    Reviewer->>API: DELETE /v1/reviews/{reviewId}<br/>Authorization: ******
+    API-->>Reviewer: 204
+```
+
+---
+
+## Flow 4: Viewer Browses Whiskies and Reviews
 
 ```mermaid
 sequenceDiagram
@@ -53,19 +72,19 @@ sequenceDiagram
     Viewer->>API: POST /v1/auth/login<br/>{ email, password }
     API-->>Viewer: 200 { accessToken, ... }
 
-    Viewer->>API: GET /v1/items<br/>Authorization: Bearer <token>
+    Viewer->>API: GET /v1/whiskies<br/>Authorization: ******
     API-->>Viewer: 200 { data: [...], pagination: { ... } }
 
-    Viewer->>API: GET /v1/items/{itemId}<br/>Authorization: Bearer <token>
-    API-->>Viewer: 200 { id, name, description, status, ... }
+    Viewer->>API: GET /v1/reviews<br/>Authorization: ******
+    API-->>Viewer: 200 { data: [...], pagination: { ... } }
 
-    Viewer->>API: POST /v1/items<br/>{ name: "Viewer Item" }<br/>Authorization: Bearer <token>
+    Viewer->>API: POST /v1/whiskies<br/>{ name: "Forbidden Dram" }<br/>Authorization: ******
     API-->>Viewer: 403 { code: "FORBIDDEN" }
 ```
 
 ---
 
-## Flow 4: Token Refresh
+## Flow 5: Token Refresh
 
 ```mermaid
 sequenceDiagram
@@ -77,7 +96,7 @@ sequenceDiagram
     Client->>API: POST /v1/auth/refresh<br/>{ refreshToken }
     API-->>Client: 200 { accessToken, refreshToken }
 
-    Client->>API: GET /v1/items<br/>Authorization: Bearer <new_token>
+    Client->>API: GET /v1/whiskies<br/>Authorization: ******
     API-->>Client: 200 { data: [...] }
 ```
 
@@ -85,5 +104,5 @@ sequenceDiagram
 
 ## Notes
 
-- All authenticated requests include `Authorization: Bearer <token>` (omitted from some diagrams for brevity).
+- All authenticated requests include `Authorization: ****** (omitted from some diagrams for brevity).
 - `4xx` error paths are covered by the auth matrix — see `auth-matrix.md`.

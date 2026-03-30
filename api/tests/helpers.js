@@ -17,9 +17,15 @@ function tokenForUser(user) {
   return signAccessToken({ sub: user.id, email: user.email, role: user.role });
 }
 
-async function createContributorToken(overrides = {}) {
-  const email = overrides.email || `contributor-${uuidv4()}@test.com`;
-  const user = await createUser(email, 'password123', 'Test', 'Contributor', 'contributor');
+async function createAdminToken(overrides = {}) {
+  const email = overrides.email || `admin-${uuidv4()}@test.com`;
+  const user = await createUser(email, 'password123', 'Test', 'Admin', 'admin');
+  return { token: tokenForUser(user), user };
+}
+
+async function createReviewerToken(overrides = {}) {
+  const email = overrides.email || `reviewer-${uuidv4()}@test.com`;
+  const user = await createUser(email, 'password123', 'Test', 'Reviewer', 'reviewer');
   return { token: tokenForUser(user), user };
 }
 
@@ -29,20 +35,38 @@ async function createViewerToken(overrides = {}) {
   return { token: tokenForUser(user), user };
 }
 
-function seedItem(contributorId, overrides = {}) {
+function seedWhiskey(overrides = {}) {
   const now = new Date().toISOString();
-  const item = {
+  const whiskey = {
     id: uuidv4(),
-    name: 'Sample Item',
-    description: 'A sample item description.',
-    status: 'active',
-    contributorId,
+    name: 'Glenfiddich 12',
+    distillery: 'Glenfiddich',
+    region: 'Speyside',
+    age: 12,
+    description: 'A classic Speyside single malt.',
     createdAt: now,
     updatedAt: now,
     ...overrides,
   };
-  store.items.set(item.id, item);
-  return item;
+  store.whiskies.set(whiskey.id, whiskey);
+  return whiskey;
+}
+
+function seedReview(reviewerId, whiskeyId, overrides = {}) {
+  const now = new Date().toISOString();
+  const review = {
+    id: uuidv4(),
+    whiskeyId,
+    rating: 85,
+    tastingNotes: 'Fruity with hints of pear and oak.',
+    status: 'published',
+    reviewerId,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+  store.reviews.set(review.id, review);
+  return review;
 }
 
 module.exports = {
@@ -50,8 +74,10 @@ module.exports = {
   store,
   resetStore,
   createUser,
-  createContributorToken,
+  createAdminToken,
+  createReviewerToken,
   createViewerToken,
-  seedItem,
+  seedWhiskey,
+  seedReview,
   tokenForUser,
 };

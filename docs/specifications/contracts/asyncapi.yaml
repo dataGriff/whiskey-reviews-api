@@ -1,19 +1,15 @@
 asyncapi: 2.6.0
 info:
-  title: Items Domain Events
+  title: Whiskey Reviews Domain Events
   version: 1.0.0
   description: |
-    Domain event contract for the **Items** example domain.
-
-    This is a deliberately simple domain included as a working reference
-    implementation of the Domain API Template. Replace this file with
-    your own domain's event contract.
+    Domain event contract for the **Whiskey Reviews** API.
 
     All events follow the [CloudEvents 1.0](https://cloudevents.io/) specification
     and are published over AMQP.
   contact:
-    name: Domain API Template
-    email: template@example.com
+    name: Whiskey Reviews API
+    email: admin@whiskeyreviews.example.com
 
 servers:
   development:
@@ -24,112 +20,218 @@ servers:
 defaultContentType: application/json
 
 tags:
-  - name: Items
-    description: Events related to the item lifecycle
+  - name: Whiskies
+    description: Events related to the whiskey inventory lifecycle
+  - name: Reviews
+    description: Events related to the whiskey review lifecycle
 
 channels:
-  items.item.added:
-    description: Published whenever a new item is added to the catalogue by a contributor.
+  whiskies.whiskey.added:
+    description: Published whenever a new whiskey is added to the inventory by an admin.
     publish:
-      operationId: onItemAdded
-      description: Consume item added events to react to new items being added to the catalogue.
+      operationId: onWhiskeyAdded
+      description: Consume whiskey added events to react to new whiskies entering the inventory.
       tags:
-        - name: Items
+        - name: Whiskies
       message:
-        $ref: '#/components/messages/ItemAdded'
+        $ref: '#/components/messages/WhiskeyAdded'
 
-  items.item.edited:
-    description: Published whenever an item's name, description, or status is changed.
+  whiskies.whiskey.edited:
+    description: Published whenever a whiskey's details are changed by an admin.
     publish:
-      operationId: onItemEdited
-      description: Consume item edited events to keep downstream systems in sync with item changes.
+      operationId: onWhiskeyEdited
+      description: Consume whiskey edited events to keep downstream systems in sync with inventory changes.
       tags:
-        - name: Items
+        - name: Whiskies
       message:
-        $ref: '#/components/messages/ItemEdited'
+        $ref: '#/components/messages/WhiskeyEdited'
 
-  items.item.removed:
-    description: Published whenever an item is removed from the catalogue by its contributor.
+  whiskies.whiskey.removed:
+    description: Published whenever a whiskey is removed from the inventory by an admin.
     publish:
-      operationId: onItemRemoved
-      description: Consume item removed events to remove references to items in downstream systems.
+      operationId: onWhiskeyRemoved
+      description: Consume whiskey removed events to remove references to whiskies in downstream systems.
       tags:
-        - name: Items
+        - name: Whiskies
       message:
-        $ref: '#/components/messages/ItemRemoved'
+        $ref: '#/components/messages/WhiskeyRemoved'
+
+  reviews.review.added:
+    description: Published whenever a new whiskey review is added by a reviewer.
+    publish:
+      operationId: onReviewAdded
+      description: Consume review added events to react to new reviews being published.
+      tags:
+        - name: Reviews
+      message:
+        $ref: '#/components/messages/ReviewAdded'
+
+  reviews.review.edited:
+    description: Published whenever a review's details or status are changed.
+    publish:
+      operationId: onReviewEdited
+      description: Consume review edited events to keep downstream systems in sync with review changes.
+      tags:
+        - name: Reviews
+      message:
+        $ref: '#/components/messages/ReviewEdited'
+
+  reviews.review.removed:
+    description: Published whenever a review is removed by its reviewer.
+    publish:
+      operationId: onReviewRemoved
+      description: Consume review removed events to remove references to reviews in downstream systems.
+      tags:
+        - name: Reviews
+      message:
+        $ref: '#/components/messages/ReviewRemoved'
 
 components:
   messages:
-    ItemAdded:
-      name: ItemAdded
-      title: Item Added
-      summary: A new item has been added to the catalogue.
+    WhiskeyAdded:
+      name: WhiskeyAdded
+      title: Whiskey Added
+      summary: A new whiskey has been added to the inventory.
       contentType: application/json
       payload:
-        $ref: '#/components/schemas/ItemAddedEvent'
+        $ref: '#/components/schemas/WhiskeyAddedEvent'
       examples:
-        - name: item-added-example
+        - name: whiskey-added-example
           payload:
             specversion: "1.0"
-            type: items.item.added
-            source: /items
+            type: whiskies.whiskey.added
+            source: /whiskies
             id: a1b2c3d4-0000-0000-0000-000000000001
             time: "2026-06-01T09:00:00Z"
             datacontenttype: application/json
             data:
-              id: a1b2c3d4-0000-0000-0000-000000000002
-              name: My First Item
-              description: A great item
-              status: active
-              contributorId: a1b2c3d4-0000-0000-0000-000000000003
+              id: a1b2c3d4-0000-0000-0000-000000000010
+              name: Laphroaig 10
+              distillery: Laphroaig
+              region: Islay
+              age: 10
+              description: Classic Islay single malt with heavy peat smoke.
               createdAt: "2026-06-01T09:00:00Z"
               updatedAt: "2026-06-01T09:00:00Z"
 
-    ItemEdited:
-      name: ItemEdited
-      title: Item Edited
-      summary: An existing item has been edited.
+    WhiskeyEdited:
+      name: WhiskeyEdited
+      title: Whiskey Edited
+      summary: An existing whiskey has been edited.
       contentType: application/json
       payload:
-        $ref: '#/components/schemas/ItemEditedEvent'
+        $ref: '#/components/schemas/WhiskeyEditedEvent'
       examples:
-        - name: item-edited-example
+        - name: whiskey-edited-example
           payload:
             specversion: "1.0"
-            type: items.item.edited
-            source: /items
-            id: a1b2c3d4-0000-0000-0000-000000000004
+            type: whiskies.whiskey.edited
+            source: /whiskies
+            id: a1b2c3d4-0000-0000-0000-000000000002
             time: "2026-06-02T10:00:00Z"
             datacontenttype: application/json
             data:
-              id: a1b2c3d4-0000-0000-0000-000000000002
-              name: My Edited Item
-              description: An updated description
-              status: archived
-              contributorId: a1b2c3d4-0000-0000-0000-000000000003
+              id: a1b2c3d4-0000-0000-0000-000000000010
+              name: Laphroaig 10
+              distillery: Laphroaig
+              region: Islay
+              age: 10
+              description: Updated description with more detail.
               createdAt: "2026-06-01T09:00:00Z"
               updatedAt: "2026-06-02T10:00:00Z"
 
-    ItemRemoved:
-      name: ItemRemoved
-      title: Item Removed
-      summary: An item has been removed from the catalogue.
+    WhiskeyRemoved:
+      name: WhiskeyRemoved
+      title: Whiskey Removed
+      summary: A whiskey has been removed from the inventory.
       contentType: application/json
       payload:
-        $ref: '#/components/schemas/ItemRemovedEvent'
+        $ref: '#/components/schemas/WhiskeyRemovedEvent'
       examples:
-        - name: item-removed-example
+        - name: whiskey-removed-example
           payload:
             specversion: "1.0"
-            type: items.item.removed
-            source: /items
-            id: a1b2c3d4-0000-0000-0000-000000000005
+            type: whiskies.whiskey.removed
+            source: /whiskies
+            id: a1b2c3d4-0000-0000-0000-000000000003
             time: "2026-06-03T11:00:00Z"
             datacontenttype: application/json
             data:
-              id: a1b2c3d4-0000-0000-0000-000000000002
-              contributorId: a1b2c3d4-0000-0000-0000-000000000003
+              id: a1b2c3d4-0000-0000-0000-000000000010
               removedAt: "2026-06-03T11:00:00Z"
+
+    ReviewAdded:
+      name: ReviewAdded
+      title: Review Added
+      summary: A new whiskey review has been added.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ReviewAddedEvent'
+      examples:
+        - name: review-added-example
+          payload:
+            specversion: "1.0"
+            type: reviews.review.added
+            source: /reviews
+            id: a1b2c3d4-0000-0000-0000-000000000004
+            time: "2026-06-01T10:00:00Z"
+            datacontenttype: application/json
+            data:
+              id: a1b2c3d4-0000-0000-0000-000000000020
+              whiskeyId: a1b2c3d4-0000-0000-0000-000000000010
+              rating: 90
+              tastingNotes: Smoky and peaty with a long finish.
+              status: published
+              reviewerId: a1b2c3d4-0000-0000-0000-000000000030
+              createdAt: "2026-06-01T10:00:00Z"
+              updatedAt: "2026-06-01T10:00:00Z"
+
+    ReviewEdited:
+      name: ReviewEdited
+      title: Review Edited
+      summary: An existing whiskey review has been edited.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ReviewEditedEvent'
+      examples:
+        - name: review-edited-example
+          payload:
+            specversion: "1.0"
+            type: reviews.review.edited
+            source: /reviews
+            id: a1b2c3d4-0000-0000-0000-000000000005
+            time: "2026-06-02T11:00:00Z"
+            datacontenttype: application/json
+            data:
+              id: a1b2c3d4-0000-0000-0000-000000000020
+              whiskeyId: a1b2c3d4-0000-0000-0000-000000000010
+              rating: 92
+              tastingNotes: Refined smokiness with a longer, sweeter finish.
+              status: archived
+              reviewerId: a1b2c3d4-0000-0000-0000-000000000030
+              createdAt: "2026-06-01T10:00:00Z"
+              updatedAt: "2026-06-02T11:00:00Z"
+
+    ReviewRemoved:
+      name: ReviewRemoved
+      title: Review Removed
+      summary: A whiskey review has been removed.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ReviewRemovedEvent'
+      examples:
+        - name: review-removed-example
+          payload:
+            specversion: "1.0"
+            type: reviews.review.removed
+            source: /reviews
+            id: a1b2c3d4-0000-0000-0000-000000000006
+            time: "2026-06-03T12:00:00Z"
+            datacontenttype: application/json
+            data:
+              id: a1b2c3d4-0000-0000-0000-000000000020
+              reviewerId: a1b2c3d4-0000-0000-0000-000000000030
+              removedAt: "2026-06-03T12:00:00Z"
 
   schemas:
     CloudEventBase:
@@ -155,22 +257,89 @@ components:
           type: string
           const: application/json
 
-    ItemData:
+    WhiskeyData:
       type: object
-      required: [id, name, description, status, contributorId, createdAt, updatedAt]
+      required: [id, name, distillery, region, age, description, createdAt, updatedAt]
       properties:
         id:
           type: string
           format: uuid
         name:
           type: string
+        distillery:
+          type: string
+        region:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          nullable: true
         description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WhiskeyAddedEvent:
+      allOf:
+        - $ref: '#/components/schemas/CloudEventBase'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/WhiskeyData'
+
+    WhiskeyEditedEvent:
+      allOf:
+        - $ref: '#/components/schemas/CloudEventBase'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/WhiskeyData'
+
+    WhiskeyRemovedEvent:
+      allOf:
+        - $ref: '#/components/schemas/CloudEventBase'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: object
+              required: [id, removedAt]
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                removedAt:
+                  type: string
+                  format: date-time
+
+    ReviewData:
+      type: object
+      required: [id, whiskeyId, rating, tastingNotes, status, reviewerId, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        whiskeyId:
+          type: string
+          format: uuid
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 100
+        tastingNotes:
           type: string
           nullable: true
         status:
           type: string
-          enum: [active, archived]
-        contributorId:
+          enum: [published, archived]
+        reviewerId:
           type: string
           format: uuid
         createdAt:
@@ -180,25 +349,25 @@ components:
           type: string
           format: date-time
 
-    ItemAddedEvent:
+    ReviewAddedEvent:
       allOf:
         - $ref: '#/components/schemas/CloudEventBase'
         - type: object
           required: [data]
           properties:
             data:
-              $ref: '#/components/schemas/ItemData'
+              $ref: '#/components/schemas/ReviewData'
 
-    ItemEditedEvent:
+    ReviewEditedEvent:
       allOf:
         - $ref: '#/components/schemas/CloudEventBase'
         - type: object
           required: [data]
           properties:
             data:
-              $ref: '#/components/schemas/ItemData'
+              $ref: '#/components/schemas/ReviewData'
 
-    ItemRemovedEvent:
+    ReviewRemovedEvent:
       allOf:
         - $ref: '#/components/schemas/CloudEventBase'
         - type: object
@@ -206,12 +375,12 @@ components:
           properties:
             data:
               type: object
-              required: [id, contributorId, removedAt]
+              required: [id, reviewerId, removedAt]
               properties:
                 id:
                   type: string
                   format: uuid
-                contributorId:
+                reviewerId:
                   type: string
                   format: uuid
                 removedAt:

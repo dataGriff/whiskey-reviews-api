@@ -1,7 +1,4 @@
-# Auth Matrix — Items
-
-> **Example domain.** This is the working reference implementation included with the Domain API Template.
-> Replace this file with your own auth matrix by running `task domain:init`.
+# Auth Matrix — Whiskey Reviews
 
 ---
 
@@ -9,8 +6,9 @@
 
 | Role | Description |
 |------|-------------|
-| `contributor` | Can add items and edit/remove their own items |
-| `viewer` | Read-only access to items |
+| `admin` | Manages the whiskey inventory (add, edit, remove whiskies) |
+| `reviewer` | Can add reviews and edit/remove their own reviews |
+| `viewer` | Read-only access to whiskies and reviews |
 
 ## Authentication
 
@@ -21,27 +19,30 @@ Tokens are issued via `POST /v1/auth/login` and refreshed via `POST /v1/auth/ref
 
 ## Auth Matrix
 
-| Operation | Endpoint | Public | contributor | viewer |
-|-----------|----------|--------|-------------|--------|
-| Register | `POST /v1/auth/register` | 🌐 | �� | 🌐 |
-| Login | `POST /v1/auth/login` | 🌐 | 🌐 | 🌐 |
-| Refresh token | `POST /v1/auth/refresh` | 🌐 | 🌐 | 🌐 |
-| Logout | `POST /v1/auth/logout` | ❌ | ✅ | ✅ |
-| List items | `GET /v1/items` | ❌ | ✅ | ✅ |
-| Add item | `POST /v1/items` | ❌ | ✅ | ❌ |
-| View item | `GET /v1/items/{itemId}` | ❌ | ✅ | ✅ |
-| Edit item | `PATCH /v1/items/{itemId}` | ❌ | ✅ own | ❌ |
-| Remove item | `DELETE /v1/items/{itemId}` | ❌ | ✅ own | ❌ |
+| Operation | Endpoint | Public | admin | reviewer | viewer |
+|-----------|----------|--------|-------|----------|--------|
+| Register | `POST /v1/auth/register` | Yes | Yes | Yes | Yes |
+| Login | `POST /v1/auth/login` | Yes | Yes | Yes | Yes |
+| Refresh token | `POST /v1/auth/refresh` | Yes | Yes | Yes | Yes |
+| Logout | `POST /v1/auth/logout` | No | Yes | Yes | Yes |
+| List whiskies | `GET /v1/whiskies` | No | Yes | Yes | Yes |
+| Add whiskey | `POST /v1/whiskies` | No | Yes | No | No |
+| View whiskey | `GET /v1/whiskies/{whiskeyId}` | No | Yes | Yes | Yes |
+| Edit whiskey | `PATCH /v1/whiskies/{whiskeyId}` | No | Yes | No | No |
+| Remove whiskey | `DELETE /v1/whiskies/{whiskeyId}` | No | Yes | No | No |
+| List reviews | `GET /v1/reviews` | No | Yes | Yes | Yes |
+| Add review | `POST /v1/reviews` | No | No | Yes | No |
+| View review | `GET /v1/reviews/{reviewId}` | No | Yes | Yes | Yes |
+| Edit review | `PATCH /v1/reviews/{reviewId}` | No | No | Yes (own) | No |
+| Remove review | `DELETE /v1/reviews/{reviewId}` | No | No | Yes (own) | No |
 
 Legend:
-- 🌐 Public (no auth required)
-- ✅ Allowed
-- ✅ own — Allowed only if `item.contributorId === req.user.sub`
-- ❌ Forbidden
+- Public column — Yes: No auth required; No: Auth required
+- Role columns — Yes: Allowed; Yes (own): Allowed only if `review.reviewerId === req.user.sub`; No: Forbidden
 
 ## Ownership Rule
 
-A `contributor` may only edit or remove items where `item.contributorId` matches their user ID (`req.user.sub`). Attempting to modify another contributor's item returns `403 Forbidden`.
+A `reviewer` may only edit or remove reviews where `review.reviewerId` matches their user ID (`req.user.sub`). Attempting to modify another reviewer's review returns `403 Forbidden`.
 
 ## Error Responses
 
@@ -50,4 +51,4 @@ A `contributor` may only edit or remove items where `item.contributorId` matches
 | No token provided | `401` | `AUTHENTICATION_REQUIRED` |
 | Token expired | `401` | `TOKEN_EXPIRED` |
 | Valid token, wrong role | `403` | `FORBIDDEN` |
-| Valid token, not item owner | `403` | `FORBIDDEN` |
+| Valid token, not review owner | `403` | `FORBIDDEN` |
