@@ -5,6 +5,18 @@ beforeEach(() => resetStore());
 
 describe('Auth routes', () => {
   describe('POST /v1/auth/register', () => {
+    it('registers a new admin and returns tokens', async () => {
+      const res = await request(app).post('/v1/auth/register').send({
+        email: 'admin@example.com',
+        password: 'password123',
+        firstName: 'Charlie',
+        lastName: 'Admin',
+        role: 'admin',
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.user.role).toBe('admin');
+    });
+
     it('registers a new reviewer and returns tokens', async () => {
       const res = await request(app).post('/v1/auth/register').send({
         email: 'contributor@example.com',

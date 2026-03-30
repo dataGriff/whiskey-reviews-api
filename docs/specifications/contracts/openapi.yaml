@@ -2,14 +2,13 @@ openapi: 3.0.3
 info:
   title: Whiskey Reviews API
   description: |
-    Community-driven whiskey review API.
+    Community-driven whiskey review API backed by an admin-curated whiskey inventory.
 
-    Reviewers can add, edit, and remove their own whiskey tasting reviews.
-    Viewers can browse and read all published reviews.
-
-    - JWT-based authentication with two roles (`reviewer`, `viewer`)
+    - Admins manage the whiskey inventory (add, edit, remove whiskies)
+    - Reviewers submit tasting reviews for whiskies in the inventory
+    - Viewers browse whiskies and reviews (read-only)
+    - JWT-based authentication with three roles (`admin`, `reviewer`, `viewer`)
     - Role-based access control (RBAC)
-    - Ownership-scoped write operations
     - Pagination on list endpoints
     - Standard error response shapes
   version: 1.0.0
@@ -24,6 +23,8 @@ servers:
 tags:
   - name: Auth
     description: Authentication — register, login, refresh tokens, and logout
+  - name: Whiskies
+    description: Whiskey inventory — add, list, view, edit, and remove whiskies (admin managed)
   - name: Reviews
     description: Whiskey review management — add, list, view, edit, and remove reviews
 
@@ -32,7 +33,7 @@ paths:
     post:
       tags: [Auth]
       summary: Register a new user
-      description: Create a new user account with either `reviewer` or `viewer` role. Returns access and refresh tokens on success.
+      description: Create a new user account with `admin`, `reviewer`, or `viewer` role. Returns access and refresh tokens on success.
       operationId: registerUser
       requestBody:
         required: true
@@ -112,11 +113,131 @@ paths:
         '401':
           $ref: '#/components/responses/AuthenticationError'
 
+  /v1/whiskies:
+    get:
+      tags: [Whiskies]
+      summary: List whiskies
+      description: Returns a paginated list of all whiskies in the inventory. Accessible by all authenticated roles.
+      operationId: listWhiskies
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated list of whiskies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhiskeyList'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+
+    post:
+      tags: [Whiskies]
+      summary: Add a whiskey
+      description: Add a new whiskey to the inventory. Only `admin` role may add whiskies.
+      operationId: createWhiskey
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWhiskeyRequest'
+      responses:
+        '201':
+          description: Whiskey added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Whiskey'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /v1/whiskies/{whiskeyId}:
+    get:
+      tags: [Whiskies]
+      summary: Get a whiskey
+      description: Retrieve a single whiskey by its ID. Accessible by all authenticated roles.
+      operationId: getWhiskey
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WhiskeyId'
+      responses:
+        '200':
+          description: Whiskey found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Whiskey'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      tags: [Whiskies]
+      summary: Edit a whiskey
+      description: Partially edit a whiskey in the inventory. Only `admin` role may edit whiskies.
+      operationId: updateWhiskey
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WhiskeyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWhiskeyRequest'
+      responses:
+        '200':
+          description: Whiskey edited successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Whiskey'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags: [Whiskies]
+      summary: Remove a whiskey
+      description: Remove a whiskey from the inventory. Only `admin` role may remove whiskies.
+      operationId: deleteWhiskey
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WhiskeyId'
+      responses:
+        '204':
+          description: Whiskey removed successfully
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
   /v1/reviews:
     get:
       tags: [Reviews]
       summary: List reviews
-      description: Returns a paginated list of all whiskey reviews. Accessible by both `reviewer` and `viewer` roles.
+      description: Returns a paginated list of all whiskey reviews. Accessible by all authenticated roles.
       operationId: listReviews
       security:
         - bearerAuth: []
@@ -136,7 +257,7 @@ paths:
     post:
       tags: [Reviews]
       summary: Add a review
-      description: Add a new whiskey review. Only `reviewer` role may add reviews. The review is associated with the authenticated reviewer.
+      description: Add a new review for a whiskey in the inventory. Only `reviewer` role may add reviews.
       operationId: createReview
       security:
         - bearerAuth: []
@@ -159,12 +280,14 @@ paths:
           $ref: '#/components/responses/AuthenticationError'
         '403':
           $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
 
   /v1/reviews/{reviewId}:
     get:
       tags: [Reviews]
       summary: Get a review
-      description: Retrieve a single whiskey review by its ID. Accessible by both `reviewer` and `viewer` roles.
+      description: Retrieve a single review by its ID. Accessible by all authenticated roles.
       operationId: getReview
       security:
         - bearerAuth: []
@@ -185,7 +308,7 @@ paths:
     patch:
       tags: [Reviews]
       summary: Edit a review
-      description: Partially edit a whiskey review. Only the `reviewer` who added the review may edit it.
+      description: Partially edit a review. Only the `reviewer` who added the review may edit it.
       operationId: updateReview
       security:
         - bearerAuth: []
@@ -216,7 +339,7 @@ paths:
     delete:
       tags: [Reviews]
       summary: Remove a review
-      description: Remove a whiskey review. Only the `reviewer` who added the review may remove it.
+      description: Remove a review. Only the `reviewer` who added the review may remove it.
       operationId: deleteReview
       security:
         - bearerAuth: []
@@ -240,6 +363,15 @@ components:
       bearerFormat: JWT
 
   parameters:
+    WhiskeyId:
+      name: whiskeyId
+      in: path
+      required: true
+      description: Unique identifier of the whiskey
+      schema:
+        type: string
+        format: uuid
+
     ReviewId:
       name: reviewId
       in: path
@@ -289,7 +421,7 @@ components:
           minLength: 1
         role:
           type: string
-          enum: [reviewer, viewer]
+          enum: [admin, reviewer, viewer]
 
     LoginRequest:
       type: object
@@ -338,16 +470,16 @@ components:
           type: string
         role:
           type: string
-          enum: [reviewer, viewer]
+          enum: [admin, reviewer, viewer]
 
-    Review:
+    Whiskey:
       type: object
-      required: [id, whiskeyName, distillery, region, age, rating, tastingNotes, status, reviewerId, createdAt, updatedAt]
+      required: [id, name, distillery, region, age, description, createdAt, updatedAt]
       properties:
         id:
           type: string
           format: uuid
-        whiskeyName:
+        name:
           type: string
           minLength: 1
         distillery:
@@ -361,6 +493,80 @@ components:
           minimum: 1
           nullable: true
           description: Age statement in years; null for no age statement (NAS)
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WhiskeyList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Whiskey'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    CreateWhiskeyRequest:
+      type: object
+      required: [name, distillery]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        distillery:
+          type: string
+          minLength: 1
+        region:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          minimum: 1
+          nullable: true
+        description:
+          type: string
+          nullable: true
+
+    UpdateWhiskeyRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+        distillery:
+          type: string
+          minLength: 1
+        region:
+          type: string
+          nullable: true
+        age:
+          type: integer
+          minimum: 1
+          nullable: true
+        description:
+          type: string
+          nullable: true
+
+    Review:
+      type: object
+      required: [id, whiskeyId, rating, tastingNotes, status, reviewerId, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        whiskeyId:
+          type: string
+          format: uuid
+          description: ID of the whiskey being reviewed
         rating:
           type: integer
           minimum: 1
@@ -407,21 +613,11 @@ components:
 
     CreateReviewRequest:
       type: object
-      required: [whiskeyName, distillery, rating]
+      required: [whiskeyId, rating]
       properties:
-        whiskeyName:
+        whiskeyId:
           type: string
-          minLength: 1
-        distillery:
-          type: string
-          minLength: 1
-        region:
-          type: string
-          nullable: true
-        age:
-          type: integer
-          minimum: 1
-          nullable: true
+          format: uuid
         rating:
           type: integer
           minimum: 1
@@ -434,19 +630,6 @@ components:
       type: object
       minProperties: 1
       properties:
-        whiskeyName:
-          type: string
-          minLength: 1
-        distillery:
-          type: string
-          minLength: 1
-        region:
-          type: string
-          nullable: true
-        age:
-          type: integer
-          minimum: 1
-          nullable: true
         rating:
           type: integer
           minimum: 1

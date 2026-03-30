@@ -17,6 +17,12 @@ function tokenForUser(user) {
   return signAccessToken({ sub: user.id, email: user.email, role: user.role });
 }
 
+async function createAdminToken(overrides = {}) {
+  const email = overrides.email || `admin-${uuidv4()}@test.com`;
+  const user = await createUser(email, 'password123', 'Test', 'Admin', 'admin');
+  return { token: tokenForUser(user), user };
+}
+
 async function createReviewerToken(overrides = {}) {
   const email = overrides.email || `reviewer-${uuidv4()}@test.com`;
   const user = await createUser(email, 'password123', 'Test', 'Reviewer', 'reviewer');
@@ -29,14 +35,28 @@ async function createViewerToken(overrides = {}) {
   return { token: tokenForUser(user), user };
 }
 
-function seedReview(reviewerId, overrides = {}) {
+function seedWhiskey(overrides = {}) {
   const now = new Date().toISOString();
-  const review = {
+  const whiskey = {
     id: uuidv4(),
-    whiskeyName: 'Glenfiddich 12',
+    name: 'Glenfiddich 12',
     distillery: 'Glenfiddich',
     region: 'Speyside',
     age: 12,
+    description: 'A classic Speyside single malt.',
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+  store.whiskies.set(whiskey.id, whiskey);
+  return whiskey;
+}
+
+function seedReview(reviewerId, whiskeyId, overrides = {}) {
+  const now = new Date().toISOString();
+  const review = {
+    id: uuidv4(),
+    whiskeyId,
     rating: 85,
     tastingNotes: 'Fruity with hints of pear and oak.',
     status: 'published',
@@ -54,8 +74,10 @@ module.exports = {
   store,
   resetStore,
   createUser,
+  createAdminToken,
   createReviewerToken,
   createViewerToken,
+  seedWhiskey,
   seedReview,
   tokenForUser,
 };

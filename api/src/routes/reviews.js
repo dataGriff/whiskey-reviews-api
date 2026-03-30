@@ -15,14 +15,14 @@ router.get('/', authenticate, (req, res) => {
 
 // POST /reviews — add a review (reviewer only)
 router.post('/', authenticate, requireRole('reviewer'), (req, res) => {
-  const { whiskeyName, distillery, region, age, rating, tastingNotes } = req.body;
+  const { whiskeyId, rating, tastingNotes } = req.body;
+  if (!store.whiskies.has(whiskeyId)) {
+    return res.status(404).json({ code: 'RESOURCE_NOT_FOUND', message: 'Whiskey not found.' });
+  }
   const now = new Date().toISOString();
   const review = {
     id: uuidv4(),
-    whiskeyName,
-    distillery,
-    region: region ?? null,
-    age: age ?? null,
+    whiskeyId,
     rating,
     tastingNotes: tastingNotes ?? null,
     status: 'published',
@@ -53,11 +53,7 @@ router.patch('/:reviewId', authenticate, requireRole('reviewer'), (req, res) => 
   if (review.reviewerId !== req.user.sub) {
     return res.status(403).json({ code: 'FORBIDDEN', message: 'You can only edit your own reviews.' });
   }
-  const { whiskeyName, distillery, region, age, rating, tastingNotes, status } = req.body;
-  if (whiskeyName !== undefined) review.whiskeyName = whiskeyName;
-  if (distillery !== undefined) review.distillery = distillery;
-  if (region !== undefined) review.region = region;
-  if (age !== undefined) review.age = age;
+  const { rating, tastingNotes, status } = req.body;
   if (rating !== undefined) review.rating = rating;
   if (tastingNotes !== undefined) review.tastingNotes = tastingNotes;
   if (status !== undefined) review.status = status;

@@ -22,6 +22,28 @@ tasks:
   # AUTH
   # ---------------------------------------------------------------------------
 
+  auth:register:admin:
+    desc: Register a whiskey admin (saves ADMIN_TOKEN)
+    vars:
+      DEMO_ID:
+        sh: grep '^DEMO_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+    cmds:
+      - |
+        RESPONSE=$(curl -s -X POST {{.BASE_URL}}/auth/register \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"email\": \"admin.{{.DEMO_ID}}@example.com\",
+            \"password\": \"password123\",
+            \"firstName\": \"Charlie\",
+            \"lastName\": \"Admin\",
+            \"role\": \"admin\"
+          }")
+        echo "$RESPONSE" | jq .
+        TOKEN=$(echo "$RESPONSE" | jq -r '.accessToken')
+        grep -v "^ADMIN_TOKEN=" {{.STATE}} > {{.STATE}}.tmp 2>/dev/null || true
+        echo "ADMIN_TOKEN=$TOKEN" >> {{.STATE}}.tmp
+        mv {{.STATE}}.tmp {{.STATE}}
+
   auth:register:reviewer:
     desc: Register a reviewer (saves REVIEWER_TOKEN)
     vars:
@@ -97,6 +119,98 @@ tasks:
         echo "Logged out."
 
   # ---------------------------------------------------------------------------
+  # WHISKIES (admin managed)
+  # ---------------------------------------------------------------------------
+
+  whiskies:list:
+    desc: List all whiskies in the inventory (uses REVIEWER_TOKEN)
+    vars:
+      REVIEWER_TOKEN:
+        sh: grep '^REVIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+    cmds:
+      - |
+        curl -s -X GET {{.BASE_URL}}/whiskies \
+          -H "Authorization: Bearer {{.REVIEWER_TOKEN}}" | jq .
+
+  whiskies:create:
+    desc: Add a new whiskey to the inventory as admin (saves WHISKEY_ID)
+    vars:
+      DEMO_ID:
+        sh: grep '^DEMO_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      ADMIN_TOKEN:
+        sh: grep '^ADMIN_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+    cmds:
+      - |
+        RESPONSE=$(curl -s -X POST {{.BASE_URL}}/whiskies \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer {{.ADMIN_TOKEN}}" \
+          -d "{
+            \"name\": \"Demo Dram {{.DEMO_ID}}\",
+            \"distillery\": \"Glen Demo\",
+            \"region\": \"Speyside\",
+            \"age\": 12,
+            \"description\": \"A demo whiskey added during the demo run.\"
+          }")
+        echo "$RESPONSE" | jq .
+        WHISKEY_ID=$(echo "$RESPONSE" | jq -r '.id')
+        grep -v "^WHISKEY_ID=" {{.STATE}} > {{.STATE}}.tmp 2>/dev/null || true
+        echo "WHISKEY_ID=$WHISKEY_ID" >> {{.STATE}}.tmp
+        mv {{.STATE}}.tmp {{.STATE}}
+
+  whiskies:get:
+    desc: Get the demo whiskey by ID
+    vars:
+      REVIEWER_TOKEN:
+        sh: grep '^REVIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      WHISKEY_ID:
+        sh: grep '^WHISKEY_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+    cmds:
+      - |
+        curl -s -X GET {{.BASE_URL}}/whiskies/{{.WHISKEY_ID}} \
+          -H "Authorization: Bearer {{.REVIEWER_TOKEN}}" | jq .
+
+  whiskies:update:
+    desc: Edit the demo whiskey as admin
+    vars:
+      ADMIN_TOKEN:
+        sh: grep '^ADMIN_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      WHISKEY_ID:
+        sh: grep '^WHISKEY_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+    cmds:
+      - |
+        curl -s -X PATCH {{.BASE_URL}}/whiskies/{{.WHISKEY_ID}} \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer {{.ADMIN_TOKEN}}" \
+          -d '{"description": "Updated description from the demo run."}' | jq .
+
+  whiskies:delete:
+    desc: Remove the demo whiskey from the inventory
+    vars:
+      ADMIN_TOKEN:
+        sh: grep '^ADMIN_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      WHISKEY_ID:
+        sh: grep '^WHISKEY_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+    cmds:
+      - |
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
+          {{.BASE_URL}}/whiskies/{{.WHISKEY_ID}} \
+          -H "Authorization: Bearer {{.ADMIN_TOKEN}}")
+        echo "DELETE /whiskies/{{.WHISKEY_ID}} → HTTP $STATUS"
+
+  whiskies:create:reviewer:
+    desc: Attempt to add a whiskey as a reviewer (expects 403 Forbidden)
+    vars:
+      REVIEWER_TOKEN:
+        sh: grep '^REVIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+    cmds:
+      - |
+        echo "Attempting to add whiskey as reviewer (should be 403):"
+        curl -s -X POST {{.BASE_URL}}/whiskies \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer {{.ADMIN_TOKEN}}" \
+          -d '{"name": "Forbidden Dram", "distillery": "Forbidden Distillery"}' | jq .
+
+  # ---------------------------------------------------------------------------
   # REVIEWS
   # ---------------------------------------------------------------------------
 
@@ -117,16 +231,15 @@ tasks:
         sh: grep '^DEMO_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
       REVIEWER_TOKEN:
         sh: grep '^REVIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      WHISKEY_ID:
+        sh: grep '^WHISKEY_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
     cmds:
       - |
         RESPONSE=$(curl -s -X POST {{.BASE_URL}}/reviews \
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer {{.REVIEWER_TOKEN}}" \
           -d "{
-            \"whiskeyName\": \"Demo Dram {{.DEMO_ID}}\",
-            \"distillery\": \"Glen Demo\",
-            \"region\": \"Speyside\",
-            \"age\": 12,
+            \"whiskeyId\": \"{{.WHISKEY_ID}}\",
             \"rating\": 85,
             \"tastingNotes\": \"A demo review with fruity notes and a smooth finish.\"
           }")
@@ -191,13 +304,15 @@ tasks:
     vars:
       VIEWER_TOKEN:
         sh: grep '^VIEWER_TOKEN=' {{.STATE}} 2>/dev/null | cut -d= -f2-
+      WHISKEY_ID:
+        sh: grep '^WHISKEY_ID=' {{.STATE}} 2>/dev/null | cut -d= -f2-
     cmds:
       - |
-        echo "Attempting to add as viewer (should be 403):"
+        echo "Attempting to add review as viewer (should be 403):"
         curl -s -X POST {{.BASE_URL}}/reviews \
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer {{.VIEWER_TOKEN}}" \
-          -d '{"whiskeyName": "Forbidden Dram", "distillery": "Forbidden Distillery", "rating": 70}' | jq .
+          -d "{\"whiskeyId\": \"{{.WHISKEY_ID}}\", \"rating\": 70}" | jq .
 
   # ---------------------------------------------------------------------------
   # DEMO WORKFLOW
@@ -208,29 +323,48 @@ tasks:
     cmds:
       - task: state:clear
       - echo ""
-      - echo "=== 1. Register reviewer and viewer ==="
+      - echo "=== 1. Register admin, reviewer and viewer ==="
+      - task: auth:register:admin
       - task: auth:register:reviewer
       - task: auth:register:viewer
       - echo ""
-      - echo "=== 2. Reviewer adds a whiskey review ==="
+      - echo "=== 2. Admin adds a whiskey to the inventory ==="
+      - task: whiskies:create
+      - echo ""
+      - echo "=== 3. List whiskies (reviewer view) ==="
+      - task: whiskies:list
+      - echo ""
+      - echo "=== 4. Reviewer tries to add a whiskey (expect 403) ==="
+      - task: whiskies:create:reviewer
+      - echo ""
+      - echo "=== 5. Reviewer adds a review for the whiskey ==="
       - task: reviews:create
       - echo ""
-      - echo "=== 3. List reviews (reviewer view) ==="
+      - echo "=== 6. List reviews (reviewer view) ==="
       - task: reviews:list
       - echo ""
-      - echo "=== 4. Viewer lists reviews (read-only) ==="
+      - echo "=== 7. Viewer lists reviews (read-only) ==="
       - task: reviews:list:viewer
       - echo ""
-      - echo "=== 5. Viewer tries to add a review (expect 403) ==="
+      - echo "=== 8. Viewer tries to add a review (expect 403) ==="
       - task: reviews:create:viewer
       - echo ""
-      - echo "=== 6. Get specific review ==="
+      - echo "=== 9. Get specific whiskey ==="
+      - task: whiskies:get
+      - echo ""
+      - echo "=== 10. Edit whiskey (admin) ==="
+      - task: whiskies:update
+      - echo ""
+      - echo "=== 11. Get specific review ==="
       - task: reviews:get
       - echo ""
-      - echo "=== 7. Edit review (archive it) ==="
+      - echo "=== 12. Edit review (archive it) ==="
       - task: reviews:update
       - echo ""
-      - echo "=== 8. Remove review ==="
+      - echo "=== 13. Remove review ==="
       - task: reviews:delete
+      - echo ""
+      - echo "=== 14. Remove whiskey ==="
+      - task: whiskies:delete
       - echo ""
       - echo "=== Demo complete ==="

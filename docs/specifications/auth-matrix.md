@@ -6,8 +6,9 @@
 
 | Role | Description |
 |------|-------------|
+| `admin` | Manages the whiskey inventory (add, edit, remove whiskies) |
 | `reviewer` | Can add reviews and edit/remove their own reviews |
-| `viewer` | Read-only access to reviews |
+| `viewer` | Read-only access to whiskies and reviews |
 
 ## Authentication
 
@@ -18,21 +19,26 @@ Tokens are issued via `POST /v1/auth/login` and refreshed via `POST /v1/auth/ref
 
 ## Auth Matrix
 
-| Operation | Endpoint | Public | reviewer | viewer |
-|-----------|----------|--------|----------|--------|
-| Register | `POST /v1/auth/register` | Yes | Yes | Yes |
-| Login | `POST /v1/auth/login` | Yes | Yes | Yes |
-| Refresh token | `POST /v1/auth/refresh` | Yes | Yes | Yes |
-| Logout | `POST /v1/auth/logout` | No | Yes | Yes |
-| List reviews | `GET /v1/reviews` | No | Yes | Yes |
-| Add review | `POST /v1/reviews` | No | Yes | No |
-| View review | `GET /v1/reviews/{reviewId}` | No | Yes | Yes |
-| Edit review | `PATCH /v1/reviews/{reviewId}` | No | Yes (own) | No |
-| Remove review | `DELETE /v1/reviews/{reviewId}` | No | Yes (own) | No |
+| Operation | Endpoint | Public | admin | reviewer | viewer |
+|-----------|----------|--------|-------|----------|--------|
+| Register | `POST /v1/auth/register` | Yes | Yes | Yes | Yes |
+| Login | `POST /v1/auth/login` | Yes | Yes | Yes | Yes |
+| Refresh token | `POST /v1/auth/refresh` | Yes | Yes | Yes | Yes |
+| Logout | `POST /v1/auth/logout` | No | Yes | Yes | Yes |
+| List whiskies | `GET /v1/whiskies` | No | Yes | Yes | Yes |
+| Add whiskey | `POST /v1/whiskies` | No | Yes | No | No |
+| View whiskey | `GET /v1/whiskies/{whiskeyId}` | No | Yes | Yes | Yes |
+| Edit whiskey | `PATCH /v1/whiskies/{whiskeyId}` | No | Yes | No | No |
+| Remove whiskey | `DELETE /v1/whiskies/{whiskeyId}` | No | Yes | No | No |
+| List reviews | `GET /v1/reviews` | No | Yes | Yes | Yes |
+| Add review | `POST /v1/reviews` | No | No | Yes | No |
+| View review | `GET /v1/reviews/{reviewId}` | No | Yes | Yes | Yes |
+| Edit review | `PATCH /v1/reviews/{reviewId}` | No | No | Yes (own) | No |
+| Remove review | `DELETE /v1/reviews/{reviewId}` | No | No | Yes (own) | No |
 
 Legend:
 - Public column — Yes: No auth required; No: Auth required
-- reviewer / viewer columns — Yes: Allowed; Yes (own): Allowed only if `review.reviewerId === req.user.sub`; No: Forbidden
+- Role columns — Yes: Allowed; Yes (own): Allowed only if `review.reviewerId === req.user.sub`; No: Forbidden
 
 ## Ownership Rule
 
